@@ -10,6 +10,9 @@ inFileHandle.close()
 
 #only fix if newlines missing
 if rawText.count('\n') == 0:
+    
+    quotesCount = 0
+
     print 'fixing '+  inFile
     outFileHandle = open(outFile,'w')
     
@@ -17,7 +20,9 @@ if rawText.count('\n') == 0:
     chunk = ''
     
     for currentChar in rawText:
-        if lastChar + currentChar == '}{':
+        if currentChar == '"': quotesCount += 1
+
+        if ((quotesCount %2 == 0) and (lastChar + currentChar == '}{')) :
             outFileHandle.write(chunk+'\n')
             chunk = ''
         chunk += currentChar
