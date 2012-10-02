@@ -17,7 +17,6 @@ count = 0
 //written as function instead of closure due to recursion
 def safePropertyAdder(currentObject, propertyMap){
     for (pair in propertyMap) {
-        println pair
         if (pair.value == null) return
         try{
             if (pair.value.getClass().equals(java.util.HashMap)){
@@ -47,9 +46,7 @@ def addVertex = { name, properties ->
 
 def addEdge = {inVertex, outVertex, name, properties->
 
-        println 'just checking at edge 1'
         edge = bgraph.addEdge(null,outVertex,inVertex,name)
-        println 'just checking at edge 2'
         safePropertyAdder(edge,properties)
         return edge
 }
@@ -57,75 +54,72 @@ def addEdge = {inVertex, outVertex, name, properties->
 
 def loader = { line -> 
     s = slurper.parseText(line)
-    s = slurper.parseText(line)
-    println s.actor
-    println s.type
-    //
+    //println s
+    if (s.actor == null) return
+    
     //out vertex is always a user
-    //name is username or login
-    outVertex=addVertex(s.actor,['actor':s.actor]+s.actor_attributes)
-    s.remove('actor')
-    s.remove('actor_attributes')
+    //name is login
+    lastVertex=addVertex(s.actor,['actor':s.remove('actor')]+s.remove('actor_attributes'))
+    
 
-    switch (s.type.toString()){
+    switch (s.type){
 
         case 'GistEvent':
-
-            inVertex = addVertex(s.payload.name, s.remove('payload'))
-            addEdge(outVertex,inVertex,'created',s)
+            vertexNames = [s.payload.name]
+            vertexProperties = [s.remove('payload')]
+            edgeNames = ['created']
+            edgeProperties = [s]
             break
 
         case 'FollowEvent':
             
-            inVertex = addVertex(s.payload.target.login, s.remove('payload').remove('target'))
-            addEdge(outVertex,inVertex,'followed',s)
+            vertexNames = [s.payload.target.login]
+            vertexProperties = [s.remove('payload').remove('target')]
+            edgeNames = ['followed']
+            edgeProperties = [s]
             break
 
         case ['MemberEvent','TeamAddEvent']:
-            
-            inVertex1 = addVertex(s.payload.target.login, s.remove('payload').remove('target'))
-            inVertex2 = addVertex(s.repository.name,s.remove('repository'))
-            addEdge(outVertex,inVertex1,'added',s)
-            addEdge(inVertex1,inVertex2,'to',s)
+
+            vertexNames = [s.payload.member.login,s.repository.name]
+            vertexProperties = [s.remove('payload').remove('target'),s.remove('repository')]
+            edgeNames = ['added','to']
+            edgeProperties = [s,s]
             break
 
         case 'CommitCommentEvent':
-            return
-            inVertex1 = addVertex(s.payload.comment_id, s.remove('payload'))
-            inVertex2 = addVertex(s.repository.name,s.remove('repository'))
-            println 'just checking'
-            println s
-            addEdge(outVertex,inVertex1,'created',s)
-            //addEdge(inVertex1,inVertex2,'on',s)
+            
+            vertexNames = [s.payload.comment_id,s.repository.name]
+            vertexProperties = [s.remove('payload'),s.remove('repository')]
+            edgeNames = ['created','on']
+            edgeProperties = [s,s]
             break
 
         case 'IssuesEvent':
-            
-            inVertex1 = addVertex(s.payload.issue,s.payload)
-            inVertex2 = addVertex(s.repository.name,s.remove('repository'))
-            addEdge(outVertex,inVertex1,'created',s)
-            addEdge(inVertex1,inVertex2,'on',s)
+            vertexNames = [s.payload.issue,s.repository.name]
+            vertexProperties = [s.remove('payload'),s.remove('repository')]
+            edgeNames = ['created','on']
+            edgeProperties = [s,s]
+
             break
 
-        case 'IssuesCommentEvent':
+        case 'IssueCommentEvent':
             
-            inVertex1 = addVertex(s.payload.comment_id, [:])
-            inVertex2 = addVertex(s.payload.issue_id,[:])
-            inVertex3 = addVertex(s.repository.name,s.remove('repository'))
-            addEdge(outVertex,inVertex1,'created',s)
-            addEdge(inVertex1,inVertex2,'on',s)
-            addEdge(inVertex2,inVertex3,'on',s)
+            vertexNames = [s.payload.comment_id,s.payload.issue_id,s.repository.name]
+            vertexProperties = [[:],[:],s.remove('repository')]
+            edgeNames = ['created','on','on']
+            edgeProperties = [s,s,s]
             break
 
         case 'PullRequestReviewCommentEvent':
             
-            inVertex1 = addVertex(s.payload.comment.comment_id, s.remove('payload'))
-            inVertex2 = addVertex(s.repository.name,s.remove('repository'))
-            addEdge(outVertex,inVertex1,'created',s)
-            addEdge(inVertex1,inVertex2,'on',s)
+            vertexNames = [s.payload.comment.commit_id,s.repository.name]
+            vertexProperties = [s.remove('payload'),s.remove('repository')]
+            edgeNames = ['created','on']
+            edgeProperties = [s,s]
             break
 
-        case [ 'CreateEvent', 'WatchEvent', 'DownloadEvent', 'DeleteEvent', 'ForkEvent', 'ForkApplyEvent', 'GollumEvent', 'PublicEvent', 'PullRequestEvent' ]:
+        case [ 'PushEvent','CreateEvent', 'WatchEvent', 'DownloadEvent', 'DeleteEvent', 'ForkEvent', 'ForkApplyEvent', 'GollumEvent', 'PublicEvent', 'PullRequestEvent' ]:
 
             edgeNameMap = [
                 'CreateEvent':'created',
@@ -139,12 +133,22 @@ def loader = { line ->
                 'PullRequestEvent':'pullRequested',
                 'PushEvent':'pushed'
             ]
-            inVertex = addVertex(s.repository.name,s.remove('repository'))
-            addEdge = addEdge(outVertex,inVertex,edgeNameMap[s.type],s)
+
+            vertexNames = [s.repository.name]
+            vertexProperties = [s.remove('repository')]
+            edgeNames = [edgeNameMap[s.type]]
+            edgeProperties = [s]
             break
         
 
     }
+
+    for (i in 0..vertexNames.size()-1) {
+        nextVertex = addVertex(vertexNames[i],vertexProperties[])
+        addEdge(lastVertex,nextVertex,edgeNames[i],edgeProperties[i])
+        lastVertex = nextVertex
+    }
+
     count = count + 1
     if (count % 1000000 == 0 ) { 
         now = System.currentTimeMillis()
@@ -167,13 +171,13 @@ For now, assume that input files contain one json entry per line.  Some of the e
 */
 
 
-//for (fileName in files){
-//    println fileName
-//    myFile = new File(fileName.toString()).eachLine {line ->addEdges(line)}
-//}
+for (fileName in files){
+    println fileName
+    myFile = new File(fileName.toString()).eachLine {line ->loader(line)}
+}
 
 
-myFile = new File('../../scratch/githubarchive/2012-09-27-8.json').eachLine {line ->loader(line)}
+//myFile = new File('../../scratch/githubarchive/2012-03-11-10.json').eachLine {line ->loader(line)}
 now = System.currentTimeMillis()  
 
 graph.shutdown()
