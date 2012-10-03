@@ -189,7 +189,7 @@ for (file in fileList){
     fileName = file.toString()
     println fileName
 
-    command = 'ruby1.9 FixGitHubArchiveDelimiters.rb ' + fileName + ' > /tmp/temp.json'
+    command = 'ruby1.9 FixGitHubArchiveDelimiters.rb ' + fileName + ' /tmp/temp.json'
     process = command.execute()
     process.waitFor()
     println 1/0
