@@ -53,8 +53,15 @@ def addEdge = {inVertex, outVertex, name, properties->
 
 
 def loader = { line -> 
-    s = slurper.parseText(line)
-    //println s
+    try{
+        s = slurper.parseText(line)
+    }
+    catch(JsonException){
+        println 'error!'
+        println line
+        return
+    }
+    //println s.actor
     if (s.actor == null) return
     
     //out vertex is always a user
@@ -181,19 +188,14 @@ fileList = baseDir.listFiles()
 for (file in fileList){
     fileName = file.toString()
     println fileName
-    if (fileName.toString().endsWith('gz')) {
-        command = 'gzip -dv ' + fileName
-        process = command.execute()
-        process.waitFor()
-        //println process.text
-        fileName = fileName[0..-4]
-    }
 
-    command = 'python FixGitHubArchiveDelimiters.py ' + fileName.toString() + ' ' + fileName.toString()
+    command = 'ruby1.9 FixGitHubArchiveDelimiters.rb ' + fileName + ' > /tmp/temp.json'
     process = command.execute()
     process.waitFor()
+    println 1/0
     //println process.text
-    myFile = new File(fileName.toString()).eachLine {line ->loader(line)}
+    myFile = new File('/tmp/temp.json').eachLine {line ->loader(line)}
+    myFile.close()
 }
 
 now = System.currentTimeMillis()  
