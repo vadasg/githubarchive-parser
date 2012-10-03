@@ -119,7 +119,18 @@ def loader = { line ->
             edgeProperties = [s,s]
             break
 
-        case [ 'PushEvent','CreateEvent', 'WatchEvent', 'DownloadEvent', 'DeleteEvent', 'ForkEvent', 'ForkApplyEvent', 'GollumEvent', 'PublicEvent', 'PullRequestEvent' ]:
+        case [ 
+            'PushEvent',
+            'CreateEvent',
+            'WatchEvent',
+            'DownloadEvent',
+            'DeleteEvent',
+            'ForkEvent',
+            'ForkApplyEvent',
+            'GollumEvent',
+            'PublicEvent',
+            'PullRequestEvent'
+        ]:
 
             edgeNameMap = [
                 'CreateEvent':'created',
@@ -162,22 +173,29 @@ def loader = { line ->
 
 
 
-folder = '../../scratch/githubarchive'
+folder = '../../scratch/githubarchivegz'
 baseDir = new File(folder)
-files = baseDir.listFiles()
-
-/*
-For now, assume that input files contain one json entry per line.  Some of the early files in the archive do not have newline delimiters between entries and have to be fixed using a separate script.  This can be streamlined later.
-*/
+fileList = baseDir.listFiles()
 
 
-for (fileName in files){
+for (file in fileList){
+    fileName = file.toString()
     println fileName
+    if (fileName.toString().endsWith('gz')) {
+        command = 'gzip -dv ' + fileName
+        process = command.execute()
+        process.waitFor()
+        //println process.text
+        fileName = fileName[0..-4]
+    }
+
+    command = 'python FixGitHubArchiveDelimiters.py ' + fileName.toString() + ' ' + fileName.toString()
+    process = command.execute()
+    process.waitFor()
+    //println process.text
     myFile = new File(fileName.toString()).eachLine {line ->loader(line)}
 }
 
-
-//myFile = new File('../../scratch/githubarchive/2012-03-11-10.json').eachLine {line ->loader(line)}
 now = System.currentTimeMillis()  
 
 graph.shutdown()
