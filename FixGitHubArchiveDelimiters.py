@@ -1,3 +1,5 @@
+#!/opt/local/bin/python
+# _*_ coding: latin-1 _*_
 #simple python script to fix early entries in githubarchive that 
 #did not use newline as delimiter between json entries
 
@@ -20,7 +22,7 @@ if rawText.count('\n') == 0:
     chunk = ''
     
     for currentChar in rawText:
-        if currentChar == '"': quotesCount += 1
+        if ((currentChar == '"') and (lastChar in [',',':'])): quotesCount += 1
 
         if ((quotesCount %2 == 0) and (lastChar + currentChar == '}{')) :
             outFileHandle.write(chunk+'\n')
