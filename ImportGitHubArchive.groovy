@@ -55,9 +55,9 @@ def addEdge = {inVertex, outVertex, name, properties->
 def loader = { line -> 
     s = slurper.parseText(line)
     if (s.actor == null) return
-    
-    //println s.actor
-    //println s.type
+    println s
+    println s.actor
+    println s.type
     
     //out vertex is always a user
     //name is login
@@ -150,6 +150,8 @@ def loader = { line ->
                 'PushEvent':'pushed'
             ]
 
+            if (s.repository == null) return
+
             vertexNames = [s.repository.name]
             vertexProperties = [s.remove('repository')]
             edgeNames = [edgeNameMap[s.type]]
@@ -183,8 +185,9 @@ baseDir = new File(folder)
 fileList = baseDir.listFiles()
 
 
-//for (file in ['../../scratch/githubarchivegz/2012-03-20-20.json.gz']){
-for (file in fileList){
+
+for (file in ['../../scratch/githubarchivegz/2012-03-20-5.json.gz']){
+//for (file in fileList){
     fileName = file.toString()
     println fileName
 
