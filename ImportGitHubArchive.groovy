@@ -61,7 +61,10 @@ def loader = { line ->
     
     //out vertex is always a user
     //name is login
-    lastVertex=addVertex(s.actor,['actor':s.remove('actor')]+s.remove('actor_attributes'))
+    actorProperties = ['actor':s.actor]
+    if (s.actor_attributes != null) actorProperties = actorProperties +  s.remove('actor_attributes')
+    
+    lastVertex=addVertex(s.remove('actor'),actorProperties)
     
 
     switch (s.type){
@@ -180,6 +183,7 @@ baseDir = new File(folder)
 fileList = baseDir.listFiles()
 
 
+//for (file in ['../../scratch/githubarchivegz/2012-03-20-20.json.gz']){
 for (file in fileList){
     fileName = file.toString()
     println fileName
