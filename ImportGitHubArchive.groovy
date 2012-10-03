@@ -53,16 +53,11 @@ def addEdge = {inVertex, outVertex, name, properties->
 
 
 def loader = { line -> 
-    try{
-        s = slurper.parseText(line)
-    }
-    catch(JsonException){
-        println 'error!'
-        println line
-        return
-    }
-    //println s.actor
+    s = slurper.parseText(line)
     if (s.actor == null) return
+    
+    //println s.actor
+    //println s.type
     
     //out vertex is always a user
     //name is login
@@ -189,13 +184,11 @@ for (file in fileList){
     fileName = file.toString()
     println fileName
 
-    command = 'ruby1.9 FixGitHubArchiveDelimiters.rb ' + fileName + ' /tmp/temp.json'
+    //could rewrite this so it streams the input but this works for now
+    command = 'ruby1.9 FixGitHubArchiveDelimiters.rb ' + fileName + ' ../../scratch/temp.json'
     process = command.execute()
     process.waitFor()
-    println 1/0
-    //println process.text
-    myFile = new File('/tmp/temp.json').eachLine {line ->loader(line)}
-    myFile.close()
+    myFile = new File('../../scratch/temp.json').eachLine {line ->loader(line)}
 }
 
 now = System.currentTimeMillis()  

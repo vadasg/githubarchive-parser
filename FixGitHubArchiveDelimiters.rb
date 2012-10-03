@@ -1,13 +1,11 @@
-# gem install yajl-ruby
-
-require 'zlib'
 require 'yajl'
+require 'zlib'
 
-gz = open(ARGV[0])
-js = Zlib::GzipReader.new(gz).read
-outFile = File.open(ARGV[1], 'w')
+gzInputFile = open(ARGV[0])
+jsonInputFile = Zlib::GzipReader.new(gzInputFile).read
+outputFile = File.open(ARGV[1], 'w')
 
-Yajl::Parser.parse(js) do |event|
-    outFile << event
-    outFile << "\n"
+Yajl::Parser.parse(jsonInputFile) do |entry|
+    outputFile << Yajl::Encoder.encode(entry)
+    outputFile << "\n"
 end
