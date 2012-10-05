@@ -8,7 +8,8 @@ import com.thinkaurelius.titan.core.*
  */
 
 
-debug = false
+debug = true
+verbose = false
 slurper = new JsonSlurper()
 count = 0
 
@@ -18,15 +19,10 @@ count = 0
 def safePropertyAdder(currentObject, propertyMap){
     for (pair in propertyMap) {
         if (pair.value == null) return
-        //if (pair.value.getClass().equals(java.util.HashMap)){
-        //    //process maps recursively
-        //    safePropertyAdder(currentObject,pair.value)
-        //}
         if (pair.key in ['type','name','id','label']){
             currentObject.setProperty('github_' + pair.key,pair.value)
-        } else {
-            currentObject.setProperty(pair.key,pair.value)
-        }
+        } else  currentObject.setProperty(pair.key,pair.value)
+        
     }
 }
 
@@ -39,14 +35,14 @@ def vertexAdder = {g,  name, type, properties ->
     if (vertex==null) {
         vertex=g.addVertex(name)
         safePropertyAdder(vertex,properties)
+        vertex.setProperty('name',name)
+        vertex.setProperty('type',type)
     }
-    vertex.setProperty('name',name)
-    vertex.setProperty('type',type)
     return vertex
 }
 
 
-def edgeAdder = {g,inVertex, outVertex, name, properties->
+def edgeAdder = {g,outVertex, inVertex, name, properties->
     if (name==null) throw new IllegalArgumentException('Name cannot be null')
     
     edge = g.addEdge(null,outVertex,inVertex,name)
@@ -60,7 +56,7 @@ def loader = {g, line ->
     s = slurper.parseText(line)
     if (s.actor == null) return
 
-    if (debug) {
+    if (verbose) {
         println s
         println s.actor
         println s.type
@@ -84,7 +80,6 @@ def loader = {g, line ->
         'DeleteEvent':'deleted',
         'ForkEvent':'forked',
         'ForkApplyEvent':'appliedForkTo',
-        'GollumEvent':'editedWikiOf',
         'PublicEvent':'madePublic',
         'PullRequestEvent':'pullRequested',
         'PushEvent':'pushed'
@@ -160,6 +155,31 @@ def loader = {g, line ->
             break
         
         /**
+         * GollumEvent: User edited WikiPage on Repository.
+         */
+        case 'GollumEvent':
+            if (s.repository == null) return
+
+            pages = []
+
+            for (p in payload.pages){
+                pages.add(
+
+                // need a way to add multiple intermediate vertices nicely
+
+
+
+            
+
+            vertexNames = [s.repository.name]
+            vertexTypes = ['Repository']
+            vertexProperties = [s.remove('repository')]
+            edgeNames = ['on']
+            edgeProperties = [s]
+
+            break
+        
+        /**
          * IssuesCommentEvent: User created Comment on Issue on Repository.
          */
         case 'IssueCommentEvent':
@@ -203,7 +223,6 @@ def loader = {g, line ->
     }
 
 
-    if (debug) println vertexNames
     for (i in 0..vertexNames.size()-1) {
         nextVertex = vertexAdder(g, vertexNames[i],vertexTypes[i],vertexProperties[])
 
@@ -211,7 +230,7 @@ def loader = {g, line ->
         if ((vertexTypes[i] == 'Repository') 
             && (repoOrg != null)){
             repositoryVertex = vertexAdder(g,repoOrg,'Organization',[:])
-            edgeAdder(g,repositoryVertex,nextVertex,'owns',[:])
+            edgeAdder(g,nextVertex,repositoryVertex,'owns',[:])
         }
 
         edgeAdder(g,lastVertex,nextVertex,edgeNames[i],edgeProperties[i])
@@ -229,17 +248,13 @@ def loader = {g, line ->
 }
 
 
-if (debug) {
-    testFile = '../../scratch/githubarchivegz/2012-04-17-8.json.gz'
-    fileList = [testFile]
-}
 
 
 start = System.currentTimeMillis() 
 last = start
 def config = [ 'cache_type':'none' ] 
 
-graph = TitanFactory.open('../../scratch/testing')
+graph = TitanFactory.open('../../scratch/testing2')
 //graph = TitanFactory.open('../../scratch/gha')
 graph.createKeyIndex('name',Vertex.class)
 BatchGraph bgraph = new BatchGraph(graph, BatchGraph.IdType.OBJECT, 10000)
@@ -250,6 +265,10 @@ baseDir = new File(folder)
 fileList = baseDir.listFiles()
 
 
+if (debug) {
+    testFile = '../../scratch/githubarchivegz/2012-04-17-8.json.gz'
+    fileList = [testFile]
+}
 
 
 /**
@@ -261,10 +280,10 @@ for (file in fileList){
     fileName = file.toString()
     println fileName
 
-    command = 'ruby1.9 FixGitHubArchiveDelimiters.rb ' + fileName + ' ../../scratch/temp.json'
+    command = 'ruby1.9 FixGitHubArchiveDelimiters.rb ' + fileName + ' ../../scratch/temp2.json'
     process = command.execute()
     process.waitFor()
-    myFile = new File('../../scratch/temp.json').eachLine {line ->loader(bgraph, line)}
+    myFile = new File('../../scratch/temp2.json').eachLine {line ->loader(bgraph, line)}
 }
 graph.shutdown()
 
@@ -272,4 +291,4 @@ graph.shutdown()
 
 now = System.currentTimeMillis()  
 println 'Total elapsed time in s'
-println (now - start)/1000
+println ((now - start)/1000.0)
