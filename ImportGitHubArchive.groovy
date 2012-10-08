@@ -8,7 +8,7 @@ import com.thinkaurelius.titan.core.*
  */
 
 
-debug = true
+debug = false
 verbose = false
 slurper = new JsonSlurper()
 count = 0
@@ -53,6 +53,12 @@ def edgeAdder = {g,outVertex, inVertex, name, properties->
 
 
 def loader = {g, line -> 
+
+
+
+
+
+
     s = slurper.parseText(line)
     if (s.actor == null) return
 
@@ -82,7 +88,6 @@ def loader = {g, line ->
         'ForkApplyEvent':'appliedForkTo',
         'PublicEvent':'madePublic',
         'PullRequestEvent':'pullRequested',
-        'PushEvent':'pushed'
     ]
 
     switch (s.type){
@@ -160,24 +165,61 @@ def loader = {g, line ->
         case 'GollumEvent':
             if (s.repository == null) return
 
-            pages = []
+            pageNames = []
+            pageProperties = []
+            pageTypes = []
+            pageEdgeNames = []
+            pageEdgeProperties = []
 
-            for (p in payload.pages){
-                pages.add(
-
-                // need a way to add multiple intermediate vertices nicely
-
-
-
+            for (p in s.payload.pages){
+                pageNames.add(p.remove('html_url'))
+                pageProperties.add(p)
+                pageTypes.add('WikiPage')
+                pageEdgeNames.add('edited')
+                pageEdgeProperties.add([:])
+            }
             
 
-            vertexNames = [s.repository.name]
-            vertexTypes = ['Repository']
-            vertexProperties = [s.remove('repository')]
-            edgeNames = ['on']
-            edgeProperties = [s]
+            vertexNames = [pageNames,s.repository.name]
+            vertexTypes = [pageTypes,'Repository']
+            vertexProperties = [pageProperties, s.remove('repository')]
+            edgeNames = [pageEdgeNames,'on']
+            edgeProperties = [pageEdgeProperties,s]
 
             break
+
+        /**
+         * PushEvent: User pushed commit on Repository.
+         */
+        case 'PushEvent':
+            if (s.repository == null) return
+            if (s.payload.shas.size() == 0) return
+
+            pageNames = []
+            pageProperties = []
+            pageTypes = []
+            pageEdgeNames = []
+            pageEdgeProperties = []
+
+            for (p in s.payload.shas){
+                pageNames.add(p[0])
+                pageProperties.add(['payload':p.drop(1)])
+                pageTypes.add('Commit')
+                pageEdgeNames.add('pushed')
+                pageEdgeProperties.add(['created_at':s.created_at,'public':s.public,'url':s.url])
+            }
+
+            s.remove('payload')
+            
+
+            vertexNames = [pageNames,s.repository.name]
+            vertexTypes = [pageTypes,'Repository']
+            vertexProperties = [pageProperties, s.remove('repository')]
+            edgeNames = [pageEdgeNames,'on']
+            edgeProperties = [pageEdgeProperties,s]
+
+            break
+        
         
         /**
          * IssuesCommentEvent: User created Comment on Issue on Repository.
@@ -222,21 +264,6 @@ def loader = {g, line ->
 
     }
 
-
-    for (i in 0..vertexNames.size()-1) {
-        nextVertex = vertexAdder(g, vertexNames[i],vertexTypes[i],vertexProperties[])
-
-        //here we add a vertex for Organizition and corresponding edges
-        if ((vertexTypes[i] == 'Repository') 
-            && (repoOrg != null)){
-            repositoryVertex = vertexAdder(g,repoOrg,'Organization',[:])
-            edgeAdder(g,nextVertex,repositoryVertex,'owns',[:])
-        }
-
-        edgeAdder(g,lastVertex,nextVertex,edgeNames[i],edgeProperties[i])
-        lastVertex = nextVertex
-    }
-
     count = count + 1
     if (count % 1000000 == 0 ) { 
         now = System.currentTimeMillis()
@@ -244,6 +271,32 @@ def loader = {g, line ->
         println sec.toString() +  ' s for ' + count.toString()
         last = now
     }
+
+    for (i in 0..vertexNames.size()-1) {
+        //here we add a vertex for Organizition and corresponding edges
+        if ((vertexTypes[i] == 'Repository') 
+            && (repoOrg != null)){
+            repositoryVertex = vertexAdder(g,repoOrg,'Organization',[:])
+            edgeAdder(g,nextVertex,repositoryVertex,'owns',[:])
+        }
+
+
+        if (vertexNames[i].getClass() == java.util.ArrayList){
+            endVertex = vertexAdder(g, vertexNames[i+1],vertexTypes[i+1],vertexProperties[i+1])
+            for (j in 0..vertexNames[i].size()-1){
+                midVertex = vertexAdder(g, vertexNames[i][j],vertexTypes[i][j],vertexProperties[i][j])
+                edgeAdder(g,lastVertex,midVertex,edgeNames[i][j],edgeProperties[i][j])
+                edgeAdder(g,midVertex,endVertex,edgeNames[i][j],edgeProperties[i][j])
+            }
+            return
+        }
+        else{
+        nextVertex = vertexAdder(g, vertexNames[i],vertexTypes[i],vertexProperties[i])
+        edgeAdder(g,lastVertex,nextVertex,edgeNames[i],edgeProperties[i])
+        lastVertex = nextVertex
+        }
+    }
+
     
 }
 
