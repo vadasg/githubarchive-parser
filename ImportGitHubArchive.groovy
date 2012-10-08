@@ -5,11 +5,20 @@ import com.thinkaurelius.titan.core.*
  * Reads in gzipped githubarchive json files in a specified directory
  * and loads into Titan graph
  * @author Vadas Gintautas
+ *
+ *
+ * Configuration option are here 
  */
 
 
 debug = false
 verbose = false
+inputFolder = '../../scratch/githubarchivegz'
+
+
+
+
+
 slurper = new JsonSlurper()
 count = 0
 
@@ -53,12 +62,6 @@ def edgeAdder = {g,outVertex, inVertex, name, properties->
 
 
 def loader = {g, line -> 
-
-
-
-
-
-
     s = slurper.parseText(line)
     if (s.actor == null) return
 
@@ -249,7 +252,7 @@ def loader = {g, line ->
 
 
         /**
-         * All other valid cases:  User -- ... --> Repository
+         * All other valid cases:  User ... Repository
          */
         case edgeNameMap.keySet() as List:
             if (s.repository == null) return
@@ -273,13 +276,11 @@ def loader = {g, line ->
     }
 
     for (i in 0..vertexNames.size()-1) {
-        //here we add a vertex for Organizition and corresponding edges
         if ((vertexTypes[i] == 'Repository') 
             && (repoOrg != null)){
             repositoryVertex = vertexAdder(g,repoOrg,'Organization',[:])
             edgeAdder(g,nextVertex,repositoryVertex,'owns',[:])
         }
-
 
         if (vertexNames[i].getClass() == java.util.ArrayList){
             endVertex = vertexAdder(g, vertexNames[i+1],vertexTypes[i+1],vertexProperties[i+1])
@@ -289,15 +290,12 @@ def loader = {g, line ->
                 edgeAdder(g,midVertex,endVertex,edgeNames[i][j],edgeProperties[i][j])
             }
             return
-        }
-        else{
-        nextVertex = vertexAdder(g, vertexNames[i],vertexTypes[i],vertexProperties[i])
-        edgeAdder(g,lastVertex,nextVertex,edgeNames[i],edgeProperties[i])
-        lastVertex = nextVertex
+        } else{
+            nextVertex = vertexAdder(g, vertexNames[i],vertexTypes[i],vertexProperties[i])
+            edgeAdder(g,lastVertex,nextVertex,edgeNames[i],edgeProperties[i])
+            lastVertex = nextVertex
         }
     }
-
-    
 }
 
 
@@ -307,19 +305,20 @@ start = System.currentTimeMillis()
 last = start
 def config = [ 'cache_type':'none' ] 
 
-graph = TitanFactory.open('../../scratch/testing2')
-//graph = TitanFactory.open('../../scratch/gha')
+conf = new BaseConfiguration()
+conf.setProperty("storage.backend","hbase")
+graph = TitanFactory.open(conf)
+
 graph.createKeyIndex('name',Vertex.class)
 BatchGraph bgraph = new BatchGraph(graph, BatchGraph.IdType.OBJECT, 10000)
 
 
-folder = '../../scratch/githubarchivegz'
-baseDir = new File(folder)
+baseDir = new File(inputFolder)
 fileList = baseDir.listFiles()
 
 
 if (debug) {
-    testFile = '../../scratch/githubarchivegz/2012-04-17-8.json.gz'
+    testFile = inputFolder + '/2012-04-17-8.json.gz'
     fileList = [testFile]
 }
 
@@ -331,12 +330,12 @@ if (debug) {
 
 for (file in fileList){
     fileName = file.toString()
-    println fileName
+    if (verbose) println fileName
 
-    command = 'ruby1.9 FixGitHubArchiveDelimiters.rb ' + fileName + ' ../../scratch/temp2.json'
+    command = 'ruby1.9 FixGitHubArchiveDelimiters.rb ' + fileName + ' /tmp/temp.json'
     process = command.execute()
     process.waitFor()
-    myFile = new File('../../scratch/temp2.json').eachLine {line ->loader(bgraph, line)}
+    myFile = new File('/tmp/temp.json').eachLine {line ->loader(bgraph, line)}
 }
 graph.shutdown()
 
