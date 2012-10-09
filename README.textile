@@ -1,4 +1,4 @@
-!https://raw.github.com/vadasg/githubarchive-parser/blob/master/githubarchive-schema.png!
+!https://raw.github.com/vadasg/githubarchive-parser/master/githubarchive-schema.png!
 
 githubarchive-parser is used to load locally stored "GitHub Archive":http://www.githubarchive.org/ files, based on the above schema.  It uses "Gremlin":https://github.com/tinkerpop/gremlin/wiki to create a "Titan":http://thinkaurelius.github.com/titan/ graph database.  It makes use of batch loading tools provided by "Blueprints":http://blueprints.tinkerpop.com.
 
