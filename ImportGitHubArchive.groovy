@@ -13,14 +13,18 @@ import com.thinkaurelius.titan.core.*
 
 debug = false
 verbose = false
+useHBase = true  //if false, use BerkleyDB instead
 inputFolder = '../../scratch/githubarchivegz'
+graphLocation = '../../scratch/gha'
 
 
 
 
 
 slurper = new JsonSlurper()
-count = 0
+edgeCount = 0
+vertexCount = 0
+eventCount = 0
 
 /**
  * Written as function instead of closure due to recursion
@@ -43,6 +47,7 @@ def vertexAdder = {g,  name, type, properties ->
     vertex=g.getVertex(name)
     if (vertex==null) {
         vertex=g.addVertex(name)
+        vertexCount = vertexCount + 1
         safePropertyAdder(vertex,properties)
         vertex.setProperty('name',name)
         vertex.setProperty('type',type)
@@ -55,6 +60,7 @@ def edgeAdder = {g,outVertex, inVertex, name, properties->
     if (name==null) throw new IllegalArgumentException('Name cannot be null')
     
     edge = g.addEdge(null,outVertex,inVertex,name)
+    edgeCount = edgeCount + 1
     safePropertyAdder(edge,properties)
     edge.setProperty('name',name)
     return edge
@@ -252,7 +258,7 @@ def loader = {g, line ->
 
 
         /**
-         * All other valid cases:  User ... Repository
+         * All other valid cases:  User (edgeName) Repository
          */
         case edgeNameMap.keySet() as List:
             if (s.repository == null) return
@@ -267,11 +273,11 @@ def loader = {g, line ->
 
     }
 
-    count = count + 1
-    if (count % 1000000 == 0 ) { 
+    eventCount = eventCount + 1
+    if (eventCount % 1000000 == 0 ) { 
         now = System.currentTimeMillis()
         sec = (now - last)/1000
-        println sec.toString() +  ' s for ' + count.toString()
+        println sec.toString() +  ' s for ' + eventCount.toString()
         last = now
     }
 
@@ -305,9 +311,12 @@ start = System.currentTimeMillis()
 last = start
 def config = [ 'cache_type':'none' ] 
 
-conf = new BaseConfiguration()
-conf.setProperty("storage.backend","hbase")
-graph = TitanFactory.open(conf)
+if (useHBase){
+    conf = new BaseConfiguration()
+    conf.setProperty("storage.backend","hbase")
+    conf.setProperty("storage.batch-loading","true")
+    graph = TitanFactory.open(conf)
+}else graph = TitanFactory.open(graphLocation)
 
 graph.createKeyIndex('name',Vertex.class)
 BatchGraph bgraph = new BatchGraph(graph, BatchGraph.IdType.OBJECT, 10000)
@@ -330,7 +339,7 @@ if (debug) {
 
 for (file in fileList){
     fileName = file.toString()
-    if (verbose) println fileName
+    println fileName
 
     command = 'ruby1.9 FixGitHubArchiveDelimiters.rb ' + fileName + ' /tmp/temp.json'
     process = command.execute()
@@ -342,5 +351,9 @@ graph.shutdown()
 
 
 now = System.currentTimeMillis()  
-println 'Total elapsed time in s'
-println ((now - start)/1000.0)
+elapsed =  ((now - start)/1000.0)
+println 'Done.  Statistics:'
+println eventCount + ' events'
+println vertexCount + ' vertices'
+println edgeCount + ' edges'
+println elapsed + ' seconds elapsed'
