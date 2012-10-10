@@ -56,13 +56,13 @@ def vertexAdder = {g,  name, type, properties ->
 }
 
 
-def edgeAdder = {g,outVertex, inVertex, name, properties->
+def edgeAdder = {g,outVertex, inVertex, label, properties->
     if (name==null) throw new IllegalArgumentException('Name cannot be null')
     
-    edge = g.addEdge(null,outVertex,inVertex,name)
+    edge = g.addEdge(null,outVertex,inVertex,label)
     edgeCount = edgeCount + 1
     safePropertyAdder(edge,properties)
-    edge.setProperty('name',name)
+    edge.setProperty('label',label)
     return edge
 }
 
@@ -88,7 +88,7 @@ def loader = {g, line ->
             
     if (s.repository != null) repoOrg = s.repository.organizatio
     
-    edgeNameMap = [
+    edgeLabelMap = [
         'CreateEvent':'created',
         'WatchEvent':'watched',
         'DownloadEvent':'downloaded',
@@ -109,7 +109,7 @@ def loader = {g, line ->
             vertexNames = [s.payload.name]
             vertexTypes = ['Gist']
             vertexProperties = [s.remove('payload')]
-            edgeNames = ['created']
+            edgeLabels = ['created']
             edgeProperties = [s]
             break
         
@@ -121,7 +121,7 @@ def loader = {g, line ->
             vertexNames = [s.payload.target.login]
             vertexTypes = ['User']
             vertexProperties = [s.remove('payload').remove('target')]
-            edgeNames = ['followed']
+            edgeLabels = ['followed']
             edgeProperties = [s]
             break
 
@@ -137,7 +137,7 @@ def loader = {g, line ->
             vertexNames = [s.payload.member.login,s.repository.name]
             vertexTypes = ['User','Repository']
             vertexProperties = [s.remove('payload').remove('target'),s.remove('repository')]
-            edgeNames = ['added','to']
+            edgeLabels = ['added','to']
             edgeProperties = [s,s]
             break
 
@@ -150,7 +150,7 @@ def loader = {g, line ->
             vertexNames = [s.payload.comment_id,s.repository.name]
             vertexTypes = ['Comment','Repository']
             vertexProperties = [s.remove('payload'),s.remove('repository')]
-            edgeNames = ['created','on']
+            edgeLabels = ['created','on']
             edgeProperties = [s,s]
             break
 
@@ -163,7 +163,7 @@ def loader = {g, line ->
             vertexNames = [s.payload.issue,s.repository.name]
             vertexTypes = ['Issue','Repository']
             vertexProperties = [s.remove('payload'),s.remove('repository')]
-            edgeNames = ['created','on']
+            edgeLabels = ['created','on']
             edgeProperties = [s,s]
 
             break
@@ -192,7 +192,7 @@ def loader = {g, line ->
             vertexNames = [pageNames,s.repository.name]
             vertexTypes = [pageTypes,'Repository']
             vertexProperties = [pageProperties, s.remove('repository')]
-            edgeNames = [pageEdgeNames,'on']
+            edgeLabels = [pageEdgeNames,'on']
             edgeProperties = [pageEdgeProperties,s]
 
             break
@@ -224,7 +224,7 @@ def loader = {g, line ->
             vertexNames = [pageNames,s.repository.name]
             vertexTypes = [pageTypes,'Repository']
             vertexProperties = [pageProperties, s.remove('repository')]
-            edgeNames = [pageEdgeNames,'on']
+            edgeLabels = [pageEdgeNames,'on']
             edgeProperties = [pageEdgeProperties,s]
 
             break
@@ -239,7 +239,7 @@ def loader = {g, line ->
             vertexNames = [s.payload.comment_id,s.payload.issue_id,s.repository.name]
             vertexTypes = ['Comment','Issue','Repository']
             vertexProperties = [[:],[:],s.remove('repository')]
-            edgeNames = ['created','on','on']
+            edgeLabels = ['created','on','on']
             edgeProperties = [s,s,s]
             break
 
@@ -252,21 +252,21 @@ def loader = {g, line ->
             vertexNames = [s.payload.comment.commit_id,s.repository.name]
             vertexTypes = ['Comment','Repository']
             vertexProperties = [s.remove('payload'),s.remove('repository')]
-            edgeNames = ['created','on']
+            edgeLabels = ['created','on']
             edgeProperties = [s,s]
             break
 
 
         /**
-         * All other valid cases:  User (edgeName) Repository
+         * All other valid cases:  User (edgeLabel) Repository
          */
-        case edgeNameMap.keySet() as List:
+        case edgeLabelMap.keySet() as List:
             if (s.repository == null) return
 
             vertexNames = [s.repository.name]
             vertexTypes = ['Repository']
             vertexProperties = [s.remove('repository')]
-            edgeNames = [edgeNameMap[s.type]]
+            edgeLabels = [edgeLabelMap[s.type]]
             edgeProperties = [s]
             break
         
@@ -292,13 +292,13 @@ def loader = {g, line ->
             endVertex = vertexAdder(g, vertexNames[i+1],vertexTypes[i+1],vertexProperties[i+1])
             for (j in 0..vertexNames[i].size()-1){
                 midVertex = vertexAdder(g, vertexNames[i][j],vertexTypes[i][j],vertexProperties[i][j])
-                edgeAdder(g,lastVertex,midVertex,edgeNames[i][j],edgeProperties[i][j])
-                edgeAdder(g,midVertex,endVertex,edgeNames[i][j],edgeProperties[i][j])
+                edgeAdder(g,lastVertex,midVertex,edgeLabels[i][j],edgeProperties[i][j])
+                edgeAdder(g,midVertex,endVertex,edgeLabels[i][j],edgeProperties[i][j])
             }
             return
         } else{
             nextVertex = vertexAdder(g, vertexNames[i],vertexTypes[i],vertexProperties[i])
-            edgeAdder(g,lastVertex,nextVertex,edgeNames[i],edgeProperties[i])
+            edgeAdder(g,lastVertex,nextVertex,edgeLabels[i],edgeProperties[i])
             lastVertex = nextVertex
         }
     }
