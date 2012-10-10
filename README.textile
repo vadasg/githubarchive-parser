@@ -6,32 +6,28 @@ Getting started:
 
 First download as much of the GitHub Archive as you want to load.  To get everything to date:
 
-```bash
-mkdir /tmp/githubarchive
-cd /tmp/githubarchive
+@mkdir /tmp/githubarchive@
+@cd /tmp/githubarchive@
+@for i in {3..10}@
+    @do@
+        @wget http://data.githubarchive.org/2012-`printf "%02d" $i`-{01..31}-{0..23}.json.gz &@
+    @done@
 
-for i in {3..10}
-    do
-        wget http://data.githubarchive.org/2012-`printf "%02d" $i`-{01..31}-{0..23}.json.gz &
-    done
-```
 
 Next you will need a version of Titan built with Groovy 1.8.8 or later, due to a known bug with json parsing in Groovy 1.8.6.  Gremlin 2.1.0 uses Groovy 1.8.6, but Gremlin 2.2.0-SNAPSHOT uses Groovy 1.8.8.
 
-To start loading, first review the options in ImportGitHubArchive.groovy then do
+To start loading, first review the options at the beginning of ImportGitHubArchive.groovy then do
 
-```bash
-gremlin -e ImportGitHubArchive.groovy
-```
+@gremlin -e ImportGitHubArchive.groovy@
 
-Loading all of the data from the start of the archive in 2012-03 through the end of 2012-09 took me about 9 hours on a single desktop machine.  When it is finished you should see a summary like this:
+Loading all of the data from the start of the archive in 2012-03 through the end of 2012-09 took me just under 9 hours on a single desktop machine.  When it is finished you should see a summary like this:
 
-```bash
-Done. Summary:
-18482214 events
-17009381 vertices
-47704461 edges
-32357.591 seconds elapsed
-```
+
+@Done. Summary:@
+@18482214 events@
+@17009381 vertices@
+@47704461 edges@
+@32357.591 seconds elapsed@
+
 
 Author: Vadas Gintautas
