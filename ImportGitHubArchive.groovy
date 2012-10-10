@@ -57,7 +57,7 @@ def vertexAdder = {g,  name, type, properties ->
 
 
 def edgeAdder = {g,outVertex, inVertex, label, properties->
-    if (name==null) throw new IllegalArgumentException('Name cannot be null')
+    if (label==null) throw new IllegalArgumentException('Name cannot be null')
     
     edge = g.addEdge(null,outVertex,inVertex,label)
     edgeCount = edgeCount + 1
