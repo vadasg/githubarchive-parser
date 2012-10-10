@@ -14,7 +14,7 @@ import com.thinkaurelius.titan.core.*
 debug = false
 verbose = false
 useHBase = true  //if false, use BerkleyDB instead
-inputFolder = '../../scratch/githubarchive'
+inputFolder = '/tmp/githubarchive'
 graphLocation = '/tmp/gha-graph'
 
 
