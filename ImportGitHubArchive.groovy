@@ -14,7 +14,7 @@ import com.thinkaurelius.titan.core.*
 debug = false
 verbose = false
 useHBase = true  //if false, use BerkleyDB instead
-inputFolder = '/tmp/githubarchive'
+inputFolder = '../../scratch/githubarchive'
 graphLocation = '/tmp/gha-graph'
 
 
@@ -62,7 +62,6 @@ def edgeAdder = {g,outVertex, inVertex, label, properties->
     edge = g.addEdge(null,outVertex,inVertex,label)
     edgeCount = edgeCount + 1
     safePropertyAdder(edge,properties)
-    edge.setProperty('label',label)
     return edge
 }
 
