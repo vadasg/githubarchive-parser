@@ -275,7 +275,7 @@ def loader = {g, line ->
     eventCount = eventCount + 1
     if (eventCount % 1000000 == 0 ) { 
         now = System.currentTimeMillis()
-        sec = (now - last)/1000
+        sec = (now - last)/1000.0
         println sec.toString() +  ' s for ' + eventCount.toString()
         last = now
     }
@@ -314,6 +314,7 @@ if (useHBase){
     conf = new BaseConfiguration()
     conf.setProperty("storage.backend","hbase")
     conf.setProperty("storage.batch-loading","true")
+    conf.setProperty('storage.hostname','localhost')
     graph = TitanFactory.open(conf)
 }else graph = TitanFactory.open(graphLocation)
 
