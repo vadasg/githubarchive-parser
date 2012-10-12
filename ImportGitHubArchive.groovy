@@ -11,10 +11,11 @@ import com.thinkaurelius.titan.core.*
  */
 
 
-debug = true
+debug = false
 verbose = false
-useHBase = false  //if false, use BerkleyDB instead
+useHBase = true  //if false, use BerkleyDB instead
 
+//get inputFolder as command line argument
 try {
     inputFolder = a1
 }
@@ -22,8 +23,7 @@ catch (MissingPropertyException) {
     throw new IllegalArgumentException('\n\nusage: gremlin -e ImportGitHubArchive.groovy <inputFolder>\n')
 }
 
-
-graphLocation = '/tmp/foo'
+graphLocation = '/tmp/debug_graph' //only for BerkleyDB
 
 
 
@@ -52,7 +52,11 @@ def vertexAdder = {g,  name, type, properties ->
     if (name==null) throw new IllegalArgumentException('Name cannot be null')
     if (name==null) throw new IllegalArgumentException('Type cannot be null')
 
+    name = name.toString()
     vertex=g.getVertex(name)
+    //occasionally some organizations and repositories
+    //have the same name, etc.  need to fix this.
+    //if ((vertex==null) || (!vertex.getProperty('type').equals(type))){
     if (vertex==null) {
         vertex=g.addVertex(name)
         vertexCount = vertexCount + 1
@@ -91,10 +95,15 @@ def loader = {g, line ->
     actorProperties = ['actor':s.actor]
     if (s.actor_attributes != null) actorProperties = actorProperties +  s.remove('actor_attributes')
     lastVertex=vertexAdder(g, s.remove('actor'),'User',actorProperties)
+
+
+    try {
+        repoOrg = s.repository.organization
+    }
+    catch (NullPointerException) {
+        repoOrg = null
+    }
             
-            
-    if (s.repository != null) repoOrg = s.repository.organizatio
-    
     edgeLabelMap = [
         'CreateEvent':'created',
         'WatchEvent':'watched',
@@ -176,7 +185,7 @@ def loader = {g, line ->
             break
         
         /**
-         * GollumEvent: User edited WikiPage on Repository.
+         * GollumEvent: User edited WikiPage of Repository.
          */
         case 'GollumEvent':
             if (s.repository == null) return
@@ -199,13 +208,13 @@ def loader = {g, line ->
             vertexNames = [pageNames,s.repository.name]
             vertexTypes = [pageTypes,'Repository']
             vertexProperties = [pageProperties, s.remove('repository')]
-            edgeLabels = [pageEdgeNames,'on']
+            edgeLabels = [pageEdgeNames,'of']
             edgeProperties = [pageEdgeProperties,s]
 
             break
 
         /**
-         * PushEvent: User pushed commit on Repository.
+         * PushEvent: User pushed commit to Repository.
          */
         case 'PushEvent':
             if (s.repository == null) return
@@ -231,7 +240,7 @@ def loader = {g, line ->
             vertexNames = [pageNames,s.repository.name]
             vertexTypes = [pageTypes,'Repository']
             vertexProperties = [pageProperties, s.remove('repository')]
-            edgeLabels = [pageEdgeNames,'on']
+            edgeLabels = [pageEdgeNames,'to']
             edgeProperties = [pageEdgeProperties,s]
 
             break
@@ -289,18 +298,20 @@ def loader = {g, line ->
     }
 
     for (i in 0..vertexNames.size()-1) {
-        if ((vertexTypes[i] == 'Repository') 
-            && (repoOrg != null)){
-            repositoryVertex = vertexAdder(g,repoOrg,'Organization',[:])
-            edgeAdder(g,nextVertex,repositoryVertex,'owns',[:])
-        }
+
+        //need to fix organization name issue.
+        //if ((vertexTypes[i] == 'Repository') && (repoOrg != null)){
+        //    nextVertex = vertexAdder(g, vertexNames[i],vertexTypes[i],vertexProperties[i])
+        //    orgVertex = vertexAdder(g,repoOrg,'Organization',[:])
+        //    edgeAdder(g,orgVertex,nextVertex,'owns',[:])
+        // }
 
         if (vertexNames[i].getClass() == java.util.ArrayList){
             endVertex = vertexAdder(g, vertexNames[i+1],vertexTypes[i+1],vertexProperties[i+1])
             for (j in 0..vertexNames[i].size()-1){
                 midVertex = vertexAdder(g, vertexNames[i][j],vertexTypes[i][j],vertexProperties[i][j])
                 edgeAdder(g,lastVertex,midVertex,edgeLabels[i][j],edgeProperties[i][j])
-                edgeAdder(g,midVertex,endVertex,edgeLabels[i][j],edgeProperties[i][j])
+                edgeAdder(g,midVertex,endVertex,edgeLabels[i+1],edgeProperties[i+1])
             }
             return
         } else{
@@ -327,7 +338,7 @@ if (useHBase){
 }else graph = TitanFactory.open(graphLocation)
 
 graph.createKeyIndex('name',Vertex.class)
-BatchGraph bgraph = new BatchGraph(graph, BatchGraph.IdType.OBJECT, 10000)
+BatchGraph bgraph = new BatchGraph(graph, BatchGraph.IdType.STRING, 10000)
 
 
 baseDir = new File(inputFolder)
