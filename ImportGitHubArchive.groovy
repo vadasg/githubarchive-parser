@@ -14,7 +14,7 @@ import com.thinkaurelius.titan.core.*
 debug = false
 verbose = false
 useHBase = true  //if false, use BerkleyDB instead
-inputFolder = '../../scratch/githubarchive'
+inputFolder = '../../scratch/githubarchivegz'
 graphLocation = '/tmp/gha-graph'
 
 
@@ -340,7 +340,7 @@ for (file in fileList){
     fileName = file.toString()
     println fileName
 
-    command = 'ruby1.9 FixGitHubArchiveDelimiters.rb ' + fileName + ' /tmp/temp.json'
+    command = 'ruby FixGitHubArchiveDelimiters.rb ' + fileName + ' /tmp/temp.json'
     process = command.execute()
     process.waitFor()
     myFile = new File('/tmp/temp.json').eachLine {line ->loader(bgraph, line)}
