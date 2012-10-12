@@ -11,11 +11,19 @@ import com.thinkaurelius.titan.core.*
  */
 
 
-debug = false
+debug = true
 verbose = false
-useHBase = true  //if false, use BerkleyDB instead
-inputFolder = '/tmp/githubarchive'
-graphLocation = '/tmp/gha-graph'
+useHBase = false  //if false, use BerkleyDB instead
+
+try {
+    inputFolder = a1
+}
+catch (MissingPropertyException) {
+    throw new IllegalArgumentException('\n\nusage: gremlin -e ImportGitHubArchive.groovy <inputFolder>\n')
+}
+
+
+graphLocation = '/tmp/foo'
 
 
 
