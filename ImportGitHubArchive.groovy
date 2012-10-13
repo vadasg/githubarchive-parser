@@ -336,11 +336,12 @@ if (useHBase){
 }else graph = TitanFactory.open(graphLocation)
 
 graph.createKeyIndex('name',Vertex.class)
-BatchGraph bgraph = new BatchGraph(graph, BatchGraph.IdType.STRING, 10000)
+BatchGraph bgraph = new BatchGraph(graph, BatchGraph.IdType.STRING, 5000)
 
 
 baseDir = new File(inputFolder)
 fileList = baseDir.listFiles()
+fileList.sort()
 
 
 if (debug) {
