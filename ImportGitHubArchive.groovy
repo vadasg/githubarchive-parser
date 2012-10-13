@@ -13,7 +13,7 @@ import com.thinkaurelius.titan.core.*
 
 debug = false
 verbose = false
-useHBase = false  //if false, use BerkleyDB instead
+useHBase = true  //if false, use BerkleyDB instead
 
 //get inputFolder as command line argument
 try {
