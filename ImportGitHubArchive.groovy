@@ -13,7 +13,7 @@ import com.thinkaurelius.titan.core.*
 
 debug = false
 verbose = false
-useHBase = true  //if false, use BerkleyDB instead
+useHBase = false  //if false, use BerkleyDB instead
 
 //get inputFolder as command line argument
 try {
@@ -355,9 +355,10 @@ if (debug) {
  * also loading from temporary json file facilitates debugging
  */
 
+aCounter = 0;
 for (file in fileList){
     fileName = file.toString()
-    println fileName
+    System.out.println('[' + aCounter++ + ':' + fileList.size() + '] ' + fileName)
 
     command = 'ruby FixGitHubArchiveDelimiters.rb ' + fileName + ' /tmp/temp.json'
     process = command.execute()
