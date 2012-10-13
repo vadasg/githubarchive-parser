@@ -53,12 +53,11 @@ def vertexAdder = {g,  name, type, properties ->
     if (name==null) throw new IllegalArgumentException('Type cannot be null')
 
     name = name.toString()
-    vertex=g.getVertex(name)
-    //occasionally some organizations and repositories
-    //have the same name, etc.  need to fix this.
-    //if ((vertex==null) || (!vertex.getProperty('type').equals(type))){
-    if (vertex==null) {
-        vertex=g.addVertex(name)
+    vertexId = name+'_'+type
+    vertex=g.getVertex(vertexId)
+    
+    if ((vertex==null) || (!vertex.getProperty('type').equals(type))){
+        vertex=g.addVertex(vertexId)
         vertexCount = vertexCount + 1
         safePropertyAdder(vertex,properties)
         vertex.setProperty('name',name)
@@ -299,12 +298,11 @@ def loader = {g, line ->
 
     for (i in 0..vertexNames.size()-1) {
 
-        //need to fix organization name issue.
-        //if ((vertexTypes[i] == 'Repository') && (repoOrg != null)){
-        //    nextVertex = vertexAdder(g, vertexNames[i],vertexTypes[i],vertexProperties[i])
-        //    orgVertex = vertexAdder(g,repoOrg,'Organization',[:])
-        //    edgeAdder(g,orgVertex,nextVertex,'owns',[:])
-        // }
+        if ((vertexTypes[i] == 'Repository') && (repoOrg != null)){
+            nextVertex = vertexAdder(g, vertexNames[i],vertexTypes[i],vertexProperties[i])
+            orgVertex = vertexAdder(g,repoOrg,'Organization',[:])
+            edgeAdder(g,orgVertex,nextVertex,'owns',[:])
+        }
 
         if (vertexNames[i].getClass() == java.util.ArrayList){
             endVertex = vertexAdder(g, vertexNames[i+1],vertexTypes[i+1],vertexProperties[i+1])
