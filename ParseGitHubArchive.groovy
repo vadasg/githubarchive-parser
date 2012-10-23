@@ -18,7 +18,7 @@ try {
     edgesFileName = a3
 }
 catch (MissingPropertyException) {
-    throw new IllegalArgumentException('\n\nusage: gremlin -e ImportGitHubArchive.groovy <inputFolder> <verticesFileName> <edgesFileName> \n')
+    throw new IllegalArgumentException('\n\nusage: gremlin -e ParseGitHubArchive.groovy <inputFolder> <verticesFileName> <edgesFileName> \n')
 }
 
 verticesFile = new File(verticesFileName)
