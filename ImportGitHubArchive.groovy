@@ -12,8 +12,8 @@ import com.thinkaurelius.titan.core.*
  */
 
 
-useHBase = false  //if false, use BerkleyDB instead
-graphLocation = '/tmp/debug_graph' //only for BerkleyDB
+useHBase = true  //if false, use BerkleyDB instead
+graphLocation = '../../scratch/debug_graph' //only for BerkleyDB
 
 
 //get inputFolder as command line argument
@@ -111,13 +111,20 @@ def edgeAdder = {g, s, line ->
 last = start
 def config = [ 'cache_type':'none' ] 
 
+conf = new BaseConfiguration()
 if (useHBase){
-    conf = new BaseConfiguration()
     conf.setProperty("storage.backend","hbase")
-    conf.setProperty("storage.batch-loading","true")
     conf.setProperty('storage.hostname','localhost')
-    graph = TitanFactory.open(conf)
-}else graph = TitanFactory.open(graphLocation)
+}else{
+    conf.setProperty("storage.backend","local")
+    conf.setProperty("storage.directory",graphLocation)
+}
+
+
+conf.setProperty("storage.batch-loading","true")
+
+graph = TitanFactory.open(conf)
+println 'ok'
 
 graph.createKeyIndex('name',Vertex.class)
 BatchGraph bgraph = new BatchGraph(graph, BatchGraph.IdType.STRING, 20000)
