@@ -12,5 +12,4 @@ Yajl::Parser.parse(jsonInputFile) do |entry|
 end
 
 gzInputFile.close()
-jsonInputFile.close()
 outputFile.close()
