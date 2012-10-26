@@ -2,6 +2,7 @@ import groovy.json.JsonSlurper
 import groovy.json.JsonBuilder
 import com.thinkaurelius.titan.core.*
 
+
 /** 
  * Reads in uncompressed githubarchive json files in a specified directory
  * and loads into Titan graph
@@ -12,8 +13,8 @@ import com.thinkaurelius.titan.core.*
  */
 
 
-useHBase = true  //if false, use BerkleyDB instead
-graphLocation = '../../scratch/debug_graph' //only for BerkleyDB
+useHBase = false  //if false, use BerkleyDB instead
+graphLocation = '/tmp/debug_graph' //only for BerkleyDB
 
 
 //get inputFolder as command line argument
@@ -64,7 +65,7 @@ def safePropertyAdder = {currentObject, propertyMap ->
     }
 }
 
-
+//parses Json
 def vertexAdder = {g, s, line ->
 
     vertexId = line.substring(0, line.indexOf('\t'))
@@ -86,7 +87,7 @@ def vertexAdder = {g, s, line ->
     
 }
 
-
+//parses Json
 def edgeAdder = {g, s, line ->
     firstTab = line.indexOf('\t')
     secondTab = line.indexOf('\t',firstTab+1)
@@ -115,15 +116,18 @@ conf = new BaseConfiguration()
 if (useHBase){
     conf.setProperty("storage.backend","hbase")
     conf.setProperty('storage.hostname','localhost')
+    conf.setProperty("storage.batch-loading","true")
+    conf.setProperty("persist-attempts","10")
+    conf.setProperty("persist-wait-time","400")
+    conf.setProperty("storage.lock-retries","10")
+    conf.setProperty("storage.idauthority-block-size","100000")
+    graph = TitanFactory.open(conf)
+
 }else{
-    conf.setProperty("storage.backend","local")
-    conf.setProperty("storage.directory",graphLocation)
+    graph = TitanFactory.open(graphLocation)
 }
 
 
-conf.setProperty("storage.batch-loading","true")
-
-graph = TitanFactory.open(conf)
 println 'ok'
 
 graph.createKeyIndex('name',Vertex.class)
