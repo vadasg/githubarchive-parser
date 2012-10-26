@@ -10,3 +10,7 @@ Yajl::Parser.parse(jsonInputFile) do |entry|
     outputFile << Yajl::Encoder.encode(entry)
     outputFile << "\n"
 end
+
+gzInputFile.close()
+jsonInputFile.close()
+outputFile.close()
