@@ -134,12 +134,17 @@ graph.createKeyIndex('name',Vertex.class)
 BatchGraph bgraph = new BatchGraph(graph, BatchGraph.IdType.STRING, 20000)
 bgraph.setLoadingFromScratch(true)
 
-println 'Loading vertices'
-myFile = new File(inputVerticesFile).eachLine {line ->vertexAdder(bgraph, slurper, line)}
-println 'Loading edges'
-myFile = new File(inputEdgesFile).eachLine {line ->edgeAdder(bgraph, slurper, line)}
 
-graph.shutdown()
+try{
+
+    println 'Loading vertices'
+    myFile = new File(inputVerticesFile).eachLine {line ->vertexAdder(bgraph, slurper, line)}
+    println 'Loading edges'
+    myFile = new File(inputEdgesFile).eachLine {line ->edgeAdder(bgraph, slurper, line)}
+} finally{
+    bgraph.shutdown()
+    graph.shutdown()
+}
 
 
 
