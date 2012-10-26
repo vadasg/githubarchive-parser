@@ -1,9 +1,8 @@
 import groovy.json.JsonSlurper
-import groovy.json.JsonBuilder
 
 /** 
  * Reads in uncompressed githubarchive json files in a specified directory
- * and creates lists of vertices and edges
+ * and creates triples of vertices and edges
  * @author Vadas Gintautas
  *
  *
@@ -21,6 +20,10 @@ catch (MissingPropertyException) {
     throw new IllegalArgumentException('\n\nusage: gremlin -e ParseGitHubArchive.groovy <inputFolder> <verticesFileName> <edgesFileName> \n')
 }
 
+
+//now initial file handlers and counters
+tempJsonFileName = 'temp.json'
+tempJsonFile = new File(tempJsonFileName)
 verticesFile = new File(verticesFileName)
 edgesFile = new File(edgesFileName)
 
@@ -35,6 +38,8 @@ if (edgesFile.exists()) {
 }
 
 
+start = System.currentTimeMillis() 
+
 verticesFileStream = new FileWriter(verticesFileName,true)
 edgesFileStream = new FileWriter(edgesFileName,true)
 
@@ -43,20 +48,51 @@ eBuf = new BufferedWriter(edgesFileStream)
 
 
 slurper = new JsonSlurper()
+vertexTripleCount = 0
 eventCount = 0
 vertexCount = 0
 edgeCount = 0
+fileCount = 0
+
+baseDir = new File(inputFolder)
+fileList = baseDir.listFiles()
+fileList.sort()
+
+
+
+def safePropertyParser = {propertyMap ->
+    safeProperties = [:]
+    for (pair in propertyMap) {
+        if (pair.value != null){
+            //escape special characters in strings
+            value = pair.value.toString().replaceAll('\n','/\\n').replaceAll('\t','/\\t').replaceAll("'","\'").replaceAll('"','\"')
+            if (pair.key in ['type','name','id','label']){
+                safeProperties.('github_' + pair.key) = value
+            } else safeProperties.(pair.key) = value
+        }
+    }
+    return safeProperties
+}
+
+
+
 
 def vertexRecorder = {name, type, properties ->
     if (name==null) throw new IllegalArgumentException('Name cannot be null')
     if (type==null) throw new IllegalArgumentException('Type cannot be null')
 
     name = name.toString()
+    type = type.toString()
     vertexId = name+'_'+type
-    propertiesJson = new JsonBuilder(properties)
+    safeProperties = safePropertyParser(properties)
+    safeProperties.name = name
+    safeProperties.type = type
 
-    out = vertexId + '\t' + propertiesJson.toString() +'\n'
-    vBuf.write(out)
+    for (pair in safeProperties){
+        vBuf.write(vertexId + '\t_' + pair.key + '\t' + pair.value + '\n')
+        vertexTripleCount  = vertexTripleCount + 1
+    }
+        
     vertexCount = vertexCount + 1
     return vertexId
 }
@@ -65,8 +101,15 @@ def vertexRecorder = {name, type, properties ->
 def edgeRecorder = {outVertex, inVertex, label, properties->
     if (label==null) throw new IllegalArgumentException('Label cannot be null')
     
-    propertiesJson = new JsonBuilder(properties)
-    out = outVertex + '\t' + inVertex + '\t' + label + '\t' + propertiesJson.toString() +'\n'
+    safeProperties = safePropertyParser(properties)
+
+    out = outVertex + '\t' + label + '\t' + inVertex
+
+    for (pair in safeProperties){
+        out = out + '\t' + pair.key + '=' + pair.value
+    }
+    out = out + '\n'
+        
     eBuf.write(out)
     edgeCount = edgeCount + 1
 }
@@ -278,12 +321,6 @@ def parser = {line ->
     }
 
     eventCount = eventCount + 1
-    if (eventCount % 1000000 == 0 ) { 
-        now = System.currentTimeMillis()
-        sec = (now - last)/1000.0
-        println sec.toString() +  ' s for ' + eventCount.toString()
-        last = now
-    }
 
     for (i in 0..vertexNames.size()-1) {
 
@@ -312,27 +349,20 @@ def parser = {line ->
 
 
 
-start = System.currentTimeMillis() 
-
-
-baseDir = new File(inputFolder)
-fileList = baseDir.listFiles()
-fileList.sort()
-
-
-aCounter = 0;
-myFile = new File('/tmp/temp.json')
 
 for (file in fileList){
     fileName = file.toString()
-    System.out.println('[' + aCounter++ + ':' + fileList.size() + '] ' + fileName)
+    System.out.println('[' + fileCount++ + ':' + fileList.size() + '] ' + fileName)
 
-    command = 'ruby FixGitHubArchiveDelimiters.rb ' + fileName + ' /tmp/temp.json'
+    command = 'ruby FixGitHubArchiveDelimiters.rb ' + fileName + ' ' + tempJsonFileName
     process = command.execute()
     process.waitFor()
-    myFile.eachLine {line ->parser(line)}
+    tempJsonFile.eachLine {line ->parser(line)}
 }
 
+if (tempJsonFile.exists()) {
+    assert tempJsonFile.delete()
+}
 
 
 vBuf.close()
@@ -344,4 +374,5 @@ println 'Done.  Statistics:'
 println eventCount + ' events'
 println vertexCount + ' vertices'
 println edgeCount + ' edges'
+println vertexTripleCount  + ' vertex triples'
 println elapsed + ' seconds elapsed'
