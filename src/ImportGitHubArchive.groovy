@@ -1,10 +1,9 @@
-import groovy.json.JsonSlurper
-import groovy.json.JsonBuilder
 import com.thinkaurelius.titan.core.*
+import org.apache.commons.configuration.BaseConfiguration
 
 
 /** 
- * Reads in uncompressed githubarchive json files in a specified directory
+ * Reads in triplet files
  * and loads into Titan graph
  * @author Vadas Gintautas
  *
@@ -12,10 +11,8 @@ import com.thinkaurelius.titan.core.*
  * Configuration option are here 
  */
 
-
-useHBase = false  //if false, use BerkleyDB instead
-graphLocation = '/tmp/debug_graph' //only for BerkleyDB
-
+useHBase = true  //if false, use BerkleyDB instead
+graphLocation = './gha-graph' //only for BerkleyDB
 
 //get inputFolder as command line argument
 try {
@@ -28,120 +25,118 @@ catch (MissingPropertyException) {
 
 
 
-slurper = new JsonSlurper()
-start = System.currentTimeMillis() 
-last  = System.currentTimeMillis() 
-vertexCount = 0
-edgeCount = 0
+class Counter {
+    private int myCount
+    private double now
+    private double last
 
-def counter= {type ->
-    if (type.equals('vertex')) vertexCount = vertexCount + 1
-    else if (type.equals('edge')) edgeCount = edgeCount + 1
-
-
-
-    if ((vertexCount > 0) && (vertexCount % 1000000).equals(0)){
-        now = System.currentTimeMillis()
-        elapsed = ((now - last)/1000.0)
-        last = now
-        println vertexCount + ' vertices in ' + elapsed + ' seconds'
+    public Counter(start){
+        this.myCount = 0
+        this.last = start
     }
-    if ((edgeCount > 0) && (edgeCount  % 1000000 ).equals(0)){ 
-        now = System.currentTimeMillis()
-        elapsed = ((now - last)/1000.0)
-        last = now
-        println edgeCount + ' edges in ' + elapsed + ' seconds'
-    }
-}
-
-
-def safePropertyAdder = {currentObject, propertyMap ->
-    for (pair in propertyMap) {
-        if (pair.value == null) return
-        if (pair.key in ['type','name','id','label']){
-            currentObject.setProperty('github_' + pair.key,pair.value)
-        } else  currentObject.setProperty(pair.key,pair.value)
-        
-    }
-}
-
-//parses Json
-def vertexAdder = {g, s, line ->
-
-    vertexId = line.substring(0, line.indexOf('\t'))
-    propertiesString = line.substring(line.indexOf('\t')+1,line.size())
-    name = vertexId.reverse().substring(vertexId.reverse().indexOf('_')+1,vertexId.size()).reverse()
-    type = vertexId.reverse().substring(0,vertexId.reverse().indexOf('_')).reverse()
-    if (propertiesString.equals('null')) propertiesString = '{}'
-    properties = s.parseText(propertiesString)
-
-
-    if (name==null) throw new IllegalArgumentException('Name cannot be null')
-    if (type==null) throw new IllegalArgumentException('Type cannot be null')
-
-    vertex=g.addVertex(vertexId)
-    safePropertyAdder(vertex,properties)
-    vertex.setProperty('name',name)
-    vertex.setProperty('type',type)
-    counter('vertex')
     
+    public void increment() {
+        this.myCount++
+        if (this.myCount % 1000000 == 0){
+            now = System.currentTimeMillis() 
+            println this.myCount + ' in ' + ((now - this.last)/1000.0) + ' seconds'
+            this.last = now
+        }
+    }
+    public void reset() {
+        this.myCount = 0
+    }
+    public int getCount() {
+        return this.myCount
+    }
 }
 
-//parses Json
-def edgeAdder = {g, s, line ->
-    firstTab = line.indexOf('\t')
-    secondTab = line.indexOf('\t',firstTab+1)
-    thirdTab = line.indexOf('\t',secondTab+1)
+//parses triple
+def vertexAdder = {g, counter, line ->
+    line = line.split('\t')
+    if (line.size() < 3) return
 
-    outVertex = line.substring(0,firstTab)
-    inVertex = line.substring(firstTab+1,secondTab)
-    label = line.substring(secondTab+1,thirdTab)
-    propertiesString = line.substring(thirdTab+1,line.size())
-    if (propertiesString.equals('null')) propertiesString = '{}'
-    properties = s.parseText(propertiesString)
-
-    if (label==null) throw new IllegalArgumentException('Label cannot be null')
+    //vertexId = line[0]
+    //assert(line[1].startsWith('_'))
+    //key = line[1][1..-1]
+    //value = line[2]
     
-    edge = g.addEdge(null,g.getVertex(outVertex),g.getVertex(inVertex),label)
-    safePropertyAdder(edge,properties)
-    counter('edge')
+    if (! line[0].equals(lastVertexId))  {
+        vertex=g.addVertex(line[0])
+        lastVertexId = line[0]
+        lastVertex = vertex
+        counter.increment()
+    }
+    lastVertex.setProperty(line[1][1..-1],line[2])
+}
+
+//parses triple
+def edgeAdder = {g, counter, line ->
+    line = line.split('\t')
+    if (line.size() < 3){
+        return
+    }
+    outVertexId = line[0]
+    label = line[1]
+    inVertexId = line[2]
+    edge = g.addEdge(null,g.getVertex(outVertexId),g.getVertex(inVertexId),label)
+    if (line.size() > 3 ){
+        for (l in line[3..-1]) edge.setProperty(l.split('=')[0], l.split('=')[1])
+    }
+    counter.increment()
 }
 
 
 
-last = start
-def config = [ 'cache_type':'none' ] 
 
 conf = new BaseConfiguration()
-if (useHBase){
-    conf.setProperty("storage.backend","hbase")
-    conf.setProperty('storage.hostname','localhost')
-    conf.setProperty("storage.batch-loading","true")
-    conf.setProperty("persist-attempts","10")
-    conf.setProperty("persist-wait-time","400")
-    conf.setProperty("storage.lock-retries","10")
-    conf.setProperty("storage.idauthority-block-size","100000")
-    graph = TitanFactory.open(conf)
 
-}else{
-    graph = TitanFactory.open(graphLocation)
+if (useHBase){
+    conf.setProperty('storage.backend','hbase')
+    conf.setProperty('storage.hostname','localhost')
+    conf.setProperty('persist-attempts',10)
+    conf.setProperty('persist-wait-time',400)
+    conf.setProperty('storage.lock-retries',10)
+    conf.setProperty('storage.idauthority-block-size',20000)
+    conf.setProperty('storage.idauthority-retries',20)
+
+}else{  //use BerkeleyDB
+
+    graphFile = new File(graphLocation)
+    if (graphFile.exists()) assert graphFile.deleteDir()
+    assert graphFile.mkdir()
+
+    conf.setProperty('storage.backend','local')
+    //conf.setProperty('storage.cache_percentage','85')
+    conf.setProperty('storage.directory',graphLocation)
+    //conf.setProperty('buffer-size',1024)
 }
 
 
-println 'ok'
 
+conf.setProperty('storage.transactions','false')
+conf.setProperty("storage.batch-loading","true")
+graph = TitanFactory.open(conf)
 graph.createKeyIndex('name',Vertex.class)
-BatchGraph bgraph = new BatchGraph(graph, BatchGraph.IdType.STRING, 20000)
+
+bgraph = new BatchGraph(graph, BatchGraph.IdType.STRING, 10000)
 bgraph.setLoadingFromScratch(true)
 
+start = System.currentTimeMillis() 
+counter = new Counter(start)
+lastVertexId = null
+lastVertex = null
 
 try{
-
     println 'Loading vertices'
-    myFile = new File(inputVerticesFile).eachLine {line ->vertexAdder(bgraph, slurper, line)}
+    myFile = new File(inputVerticesFile).eachLine {line -> vertexAdder(bgraph,counter, line)}
+    vertexCount = counter.getCount()
+    counter.reset()
     println 'Loading edges'
-    myFile = new File(inputEdgesFile).eachLine {line ->edgeAdder(bgraph, slurper, line)}
+    myFile = new File(inputEdgesFile).eachLine {line ->edgeAdder(bgraph, counter, line)}
+    edgeCount = counter.getCount()
 } finally{
+    //sun.management.ManagementFactory.getDiagnosticMXBean().dumpHeap('dump.bin', true)
     bgraph.shutdown()
     graph.shutdown()
 }
