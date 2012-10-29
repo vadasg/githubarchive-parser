@@ -65,7 +65,8 @@ def safePropertyParser = {propertyMap ->
     for (pair in propertyMap) {
         if (pair.value != null){
             //escape special characters in strings
-            value = pair.value.toString().replaceAll('\n','/\\n').replaceAll('\t','/\\t').replaceAll("'","\'").replaceAll('"','\"')
+            value = pair.value.toString().replaceAll('\n','/\\n').replaceAll('\t','/\\t')
+            value = value.replaceAll("'","\'").replaceAll('"','\"').replaceAll('\r','/\\r').replaceAll('\\cM','/\\r')
             if (pair.key in ['type','name','id','label']){
                 safeProperties.('github_' + pair.key) = value
             } else safeProperties.(pair.key) = value
@@ -349,24 +350,20 @@ def parser = {line ->
 
 
 
+try {
+    for (file in fileList){
+        fileName = file.toString()
+        System.out.println('[' + fileCount++ + ':' + fileList.size() + '] ' + fileName)
 
-for (file in fileList){
-    fileName = file.toString()
-    System.out.println('[' + fileCount++ + ':' + fileList.size() + '] ' + fileName)
+        if (fileName.endsWith('json.gz')) {
+            command = 'ruby FixGitHubArchiveDelimiters.rb ' + fileName + ' ' + tempJsonFileName
+            process = command.execute()
+            process.waitFor()
+            tempJsonFile.eachLine{line ->parser(line)}
+        }
+        else myFile = new File(fileName).eachLine{line ->parser(line)}
 
-    command = 'ruby FixGitHubArchiveDelimiters.rb ' + fileName + ' ' + tempJsonFileName
-    process = command.execute()
-    process.waitFor()
-    tempJsonFile.eachLine {line ->parser(line)}
-}
-
-if (tempJsonFile.exists()) {
-    assert tempJsonFile.delete()
-}
-
-
-vBuf.close()
-eBuf.close()
+    }
 
 now = System.currentTimeMillis()  
 elapsed =  ((now - start)/1000.0)
@@ -376,3 +373,10 @@ println vertexCount + ' vertices'
 println edgeCount + ' edges'
 println vertexTripleCount  + ' vertex triples'
 println elapsed + ' seconds elapsed'
+
+} finally {
+    if (tempJsonFile.exists())  assert tempJsonFile.delete()
+    vBuf.close()
+    eBuf.close()
+}
+
