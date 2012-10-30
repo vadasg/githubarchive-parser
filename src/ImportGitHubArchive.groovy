@@ -11,15 +11,14 @@ import org.apache.commons.configuration.BaseConfiguration
  * Configuration option are here 
  */
 
-useHBase = true  //if false, use BerkleyDB instead
-graphLocation = './gha-graph' //only for BerkleyDB
+useHBase = false  //if false, use BerkleyDB instead
+graphLocation = '../../../scratch/gha-graph' //only for BerkleyDB
 
 //get inputFolder as command line argument
 try {
     inputVerticesFile = a1
     inputEdgesFile = a2
-}
-catch (MissingPropertyException) {
+} catch (MissingPropertyException) {
     throw new IllegalArgumentException('\n\nusage: gremlin -e ImportGitHubArchive.groovy <inputVertices> <inputEdges>\n')
 }
 
@@ -61,13 +60,18 @@ def vertexAdder = {g, counter, line ->
     //key = line[1][1..-1]
     //value = line[2]
     
-    if (! line[0].equals(lastVertexId))  {
-        vertex=g.addVertex(line[0])
-        lastVertexId = line[0]
-        lastVertex = vertex
-        counter.increment()
+    try {
+        if (! line[0].equals(lastVertexId))  {
+            vertex=g.addVertex(line[0])
+            lastVertexId = line[0]
+            lastVertex = vertex
+            counter.increment()
+        }
+        lastVertex.setProperty(line[1][1..-1],line[2])
+    }catch (e){
+        println e
+        println line
     }
-    lastVertex.setProperty(line[1][1..-1],line[2])
 }
 
 //parses triple
@@ -76,14 +80,19 @@ def edgeAdder = {g, counter, line ->
     if (line.size() < 3){
         return
     }
-    outVertexId = line[0]
-    label = line[1]
-    inVertexId = line[2]
-    edge = g.addEdge(null,g.getVertex(outVertexId),g.getVertex(inVertexId),label)
-    if (line.size() > 3 ){
-        for (l in line[3..-1]) edge.setProperty(l.split('=')[0], l.split('=')[1])
+    try{
+        outVertexId = line[0]
+        label = line[1]
+        inVertexId = line[2]
+        edge = g.addEdge(null,g.getVertex(outVertexId),g.getVertex(inVertexId),label)
+        if (line.size() > 3 ){
+            for (l in line[3..-1]) edge.setProperty(l.split('=')[0], l.split('=')[1])
+        }
+        counter.increment()
+    }catch (e){
+        println e
+        println line
     }
-    counter.increment()
 }
 
 
@@ -107,7 +116,7 @@ if (useHBase){
     assert graphFile.mkdir()
 
     conf.setProperty('storage.backend','local')
-    //conf.setProperty('storage.cache_percentage','85')
+    conf.setProperty('storage.cache_percentage','10')
     conf.setProperty('storage.directory',graphLocation)
     //conf.setProperty('buffer-size',1024)
 }
@@ -119,7 +128,7 @@ conf.setProperty("storage.batch-loading","true")
 graph = TitanFactory.open(conf)
 graph.createKeyIndex('name',Vertex.class)
 
-bgraph = new BatchGraph(graph, BatchGraph.IdType.STRING, 10000)
+bgraph = new BatchGraph(graph, BatchGraph.IdType.STRING, 4000)
 bgraph.setLoadingFromScratch(true)
 
 start = System.currentTimeMillis() 
