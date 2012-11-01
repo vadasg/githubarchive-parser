@@ -84,6 +84,7 @@ def vertexRecorder = {name, type, properties ->
 
     name = name.toString()
     type = type.toString()
+
     vertexId = name+'_'+type
     safeProperties = safePropertyParser(properties)
     safeProperties.name = name
@@ -128,11 +129,15 @@ def parser = {line ->
     if (s.actor_attributes != null) actorProperties = actorProperties +  s.remove('actor_attributes')
     lastVertex=vertexRecorder(s.remove('actor'),'User',actorProperties)
 
+    try {
+        repoName = s.repository.url.replace('https://github.com/','')
+    } catch (NullPointerException) {
+        repoName = null
+    }
 
     try {
         repoOrg = s.repository.organization
-    }
-    catch (NullPointerException) {
+    } catch (NullPointerException) {
         repoOrg = null
     }
             
@@ -182,7 +187,7 @@ def parser = {line ->
         case ['MemberEvent','TeamAddEvent']:
             if (s.repository == null) return
 
-            vertexNames = [s.payload.member.login,s.repository.name]
+            vertexNames = [s.payload.member.login,repoName]
             vertexTypes = ['User','Repository']
             vertexProperties = [s.remove('payload').remove('target'),s.remove('repository')]
             edgeLabels = ['added','to']
@@ -195,7 +200,7 @@ def parser = {line ->
         case 'CommitCommentEvent':
             if (s.repository == null) return
             
-            vertexNames = [s.payload.comment_id,s.repository.name]
+            vertexNames = [s.payload.comment_id,repoName]
             vertexTypes = ['Comment','Repository']
             vertexProperties = [s.remove('payload'),s.remove('repository')]
             edgeLabels = ['created','on']
@@ -208,7 +213,7 @@ def parser = {line ->
         case 'IssuesEvent':
             if (s.repository == null) return
 
-            vertexNames = [s.payload.issue,s.repository.name]
+            vertexNames = [s.payload.issue,repoName]
             vertexTypes = ['Issue','Repository']
             vertexProperties = [s.remove('payload'),s.remove('repository')]
             edgeLabels = ['created','on']
@@ -237,7 +242,7 @@ def parser = {line ->
             }
             
 
-            vertexNames = [pageNames,s.repository.name]
+            vertexNames = [pageNames,repoName]
             vertexTypes = [pageTypes,'Repository']
             vertexProperties = [pageProperties, s.remove('repository')]
             edgeLabels = [pageEdgeNames,'of']
@@ -269,7 +274,7 @@ def parser = {line ->
             s.remove('payload')
             
 
-            vertexNames = [pageNames,s.repository.name]
+            vertexNames = [pageNames,repoName]
             vertexTypes = [pageTypes,'Repository']
             vertexProperties = [pageProperties, s.remove('repository')]
             edgeLabels = [pageEdgeNames,'to']
@@ -284,7 +289,7 @@ def parser = {line ->
         case 'IssueCommentEvent':
             if (s.repository == null) return
             
-            vertexNames = [s.payload.comment_id,s.payload.issue_id,s.repository.name]
+            vertexNames = [s.payload.comment_id,s.payload.issue_id,repoName]
             vertexTypes = ['Comment','Issue','Repository']
             vertexProperties = [[:],[:],s.remove('repository')]
             edgeLabels = ['created','on','on']
@@ -297,7 +302,7 @@ def parser = {line ->
         case 'PullRequestReviewCommentEvent':
             if (s.repository == null) return
             
-            vertexNames = [s.payload.comment.commit_id,s.repository.name]
+            vertexNames = [s.payload.comment.commit_id,repoName]
             vertexTypes = ['Comment','Repository']
             vertexProperties = [s.remove('payload'),s.remove('repository')]
             edgeLabels = ['created','on']
@@ -311,7 +316,7 @@ def parser = {line ->
         case edgeLabelMap.keySet() as List:
             if (s.repository == null) return
 
-            vertexNames = [s.repository.name]
+            vertexNames = [repoName]
             vertexTypes = ['Repository']
             vertexProperties = [s.remove('repository')]
             edgeLabels = [edgeLabelMap[s.type]]
@@ -365,14 +370,14 @@ try {
 
     }
 
-now = System.currentTimeMillis()  
-elapsed =  ((now - start)/1000.0)
-println 'Done.  Statistics:'
-println eventCount + ' events'
-println vertexCount + ' vertices'
-println edgeCount + ' edges'
-println vertexTripleCount  + ' vertex triples'
-println elapsed + ' seconds elapsed'
+    now = System.currentTimeMillis()  
+    elapsed =  ((now - start)/1000.0)
+    println 'Done.  Statistics:'
+    println eventCount + ' events'
+    println vertexCount + ' vertices'
+    println edgeCount + ' edges'
+    println vertexTripleCount  + ' vertex triples'
+    println elapsed + ' seconds elapsed'
 
 } finally {
     if (tempJsonFile.exists())  assert tempJsonFile.delete()
