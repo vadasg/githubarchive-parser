@@ -11,7 +11,7 @@ import org.apache.commons.configuration.BaseConfiguration
  * Configuration option are here 
  */
 
-useHBase = false  //if false, use BerkleyDB instead
+useHBase = true  //if false, use BerkleyDB instead
 graphLocation = '../../../scratch/gha-graph' //only for BerkleyDB
 
 //get inputFolder as command line argument
@@ -103,10 +103,10 @@ conf = new BaseConfiguration()
 if (useHBase){
     conf.setProperty('storage.backend','hbase')
     conf.setProperty('storage.hostname','localhost')
-    conf.setProperty('persist-attempts',10)
+    conf.setProperty('persist-attempts',20)
     conf.setProperty('persist-wait-time',400)
-    conf.setProperty('storage.lock-retries',10)
-    conf.setProperty('storage.idauthority-block-size',20000)
+    conf.setProperty('storage.lock-retries',20)
+    conf.setProperty('storage.idauthority-block-size',1000000000)
     conf.setProperty('storage.idauthority-retries',20)
 
 }else{  //use BerkeleyDB
@@ -116,7 +116,7 @@ if (useHBase){
     assert graphFile.mkdir()
 
     conf.setProperty('storage.backend','local')
-    conf.setProperty('storage.cache_percentage','10')
+    conf.setProperty('storage.cache_percentage','60')
     conf.setProperty('storage.directory',graphLocation)
     //conf.setProperty('buffer-size',1024)
 }
@@ -128,7 +128,7 @@ conf.setProperty("storage.batch-loading","true")
 graph = TitanFactory.open(conf)
 graph.createKeyIndex('name',Vertex.class)
 
-bgraph = new BatchGraph(graph, BatchGraph.IdType.STRING, 4000)
+bgraph = new BatchGraph(graph, BatchGraph.IdType.STRING, 15000)
 bgraph.setLoadingFromScratch(true)
 
 start = System.currentTimeMillis() 
