@@ -104,9 +104,9 @@ if (useHBase){
     conf.setProperty('storage.backend','hbase')
     conf.setProperty('storage.hostname','localhost')
     conf.setProperty('persist-attempts',20)
-    conf.setProperty('persist-wait-time',400)
+    //conf.setProperty('persist-wait-time',400)
     conf.setProperty('storage.lock-retries',20)
-    conf.setProperty('storage.idauthority-block-size',1000000000)
+    conf.setProperty('storage.idauthority-block-size',10000000)
     conf.setProperty('storage.idauthority-retries',20)
 
 }else{  //use BerkeleyDB
@@ -123,12 +123,13 @@ if (useHBase){
 
 
 
-conf.setProperty('storage.transactions','false')
+//conf.setProperty('storage.transactions','false')
 conf.setProperty("storage.batch-loading","true")
 graph = TitanFactory.open(conf)
 graph.createKeyIndex('name',Vertex.class)
+graph.stopTransaction(SUCCESS)
 
-bgraph = new BatchGraph(graph, BatchGraph.IdType.STRING, 15000)
+bgraph = new BatchGraph(graph, BatchGraph.IdType.STRING, 25000)
 bgraph.setLoadingFromScratch(true)
 
 start = System.currentTimeMillis() 
