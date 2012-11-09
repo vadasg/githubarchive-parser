@@ -9,6 +9,7 @@ import groovy.json.JsonSlurper
  * Configuration option are here 
  */
 
+MAX_STRING_LENGTH = 1000
 
 //get inputFolder as command line argument
 try {
@@ -58,14 +59,38 @@ baseDir = new File(inputFolder)
 fileList = baseDir.listFiles()
 fileList.sort()
 
+def truncate = { inputString, maxLength->
+    if (inputString.getClass() != java.lang.String) throw new IllegalArgumentException('input to truncate must be string')
+    if (inputString.size() > maxLength) return inputString[0..maxLength-4] + '...'
+    return inputString
+}
+
+
+
+def sanitizeProperty = { propertyArray ->
+    for (i in 0..propertyArray.size()-1){
+        if ((propertyArray[i] != null) && (propertyArray[i].getClass() == java.lang.String)){
+            propertyArray[i] = truncate(propertyArray[i],MAX_STRING_LENGTH)
+        }
+    }
+    return propertyArray
+}
+
 
 
 def safePropertyParser = {propertyMap ->
     safeProperties = [:]
     for (pair in propertyMap) {
         if (pair.value != null){
+            value = pair.value
+
+            if (value.getClass() == java.lang.String){
+                value = truncate(value,MAX_STRING_LENGTH)
+            }else if (value.getClass() == java.util.ArrayList){
+                value = sanitizeProperty(value)
+            }
             //escape special characters in strings
-            value = pair.value.toString().replaceAll('\n','/\\n').replaceAll('\t','/\\t')
+            value = value.toString().replaceAll('\n','/\\n').replaceAll('\t','/\\t')
             value = value.replaceAll("'","\'").replaceAll('"','\"').replaceAll('\r','/\\r').replaceAll('\\cM','/\\r')
             if (pair.key in ['type','name','id','label']){
                 safeProperties.('github_' + pair.key) = value
