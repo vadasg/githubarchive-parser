@@ -102,6 +102,7 @@ conf = new BaseConfiguration()
 
 if (useHBase){
     conf.setProperty('storage.backend','hbase')
+    conf.setProperty('storage.tablename','titan-big')
     conf.setProperty('storage.hostname','localhost')
     conf.setProperty('persist-attempts',20)
     //conf.setProperty('persist-wait-time',400)
