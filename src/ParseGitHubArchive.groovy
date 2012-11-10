@@ -11,20 +11,17 @@ import groovy.json.JsonSlurper
 
 MAX_STRING_LENGTH = 1000
 
-//get inputFolder as command line argument
 try {
-    inputFolder = a1
+    inputFileList = a1
     verticesFileName = a2
     edgesFileName = a3
 }
 catch (MissingPropertyException) {
-    throw new IllegalArgumentException('\n\nusage: gremlin -e ParseGitHubArchive.groovy <inputFolder> <verticesFileName> <edgesFileName> \n')
+    throw new IllegalArgumentException('\n\nusage: gremlin -e ParseGitHubArchive.groovy <inputFileList> <verticesFileName> <edgesFileName> \n')
 }
 
 
 //now initial file handlers and counters
-tempJsonFileName = 'temp.json'
-tempJsonFile = new File(tempJsonFileName)
 verticesFile = new File(verticesFileName)
 edgesFile = new File(edgesFileName)
 
@@ -55,9 +52,8 @@ vertexCount = 0
 edgeCount = 0
 fileCount = 0
 
-baseDir = new File(inputFolder)
-fileList = baseDir.listFiles()
-fileList.sort()
+fileHandle = new File(inputFileList)
+def fileList = fileHandle.readLines()
 
 def truncate = { inputString, maxLength->
     if (inputString.getClass() != java.lang.String) throw new IllegalArgumentException('input to truncate must be string')
@@ -383,16 +379,8 @@ def parser = {line ->
 try {
     for (file in fileList){
         fileName = file.toString()
-        System.out.println('[' + fileCount++ + ':' + fileList.size() + '] ' + fileName)
-
-        if (fileName.endsWith('json.gz')) {
-            command = 'ruby FixGitHubArchiveDelimiters.rb ' + fileName + ' ' + tempJsonFileName
-            process = command.execute()
-            process.waitFor()
-            tempJsonFile.eachLine{line ->parser(line)}
-        }
-        else myFile = new File(fileName).eachLine{line ->parser(line)}
-
+        println '[' + fileCount++ + ':' + fileList.size() + '] ' + fileName
+        myFile = new File(fileName).eachLine{line ->parser(line)}
     }
 
     now = System.currentTimeMillis()  
@@ -405,7 +393,6 @@ try {
     println elapsed + ' seconds elapsed'
 
 } finally {
-    if (tempJsonFile.exists())  assert tempJsonFile.delete()
     vBuf.close()
     eBuf.close()
 }
