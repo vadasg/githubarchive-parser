@@ -12,9 +12,9 @@ import groovy.json.JsonSlurper
 MAX_STRING_LENGTH = 1000
 
 try {
-    inputFileList = a1
-    verticesFileName = a2
-    edgesFileName = a3
+    inputFileList = args[0]
+    verticesFileName = args[1]
+    edgesFileName = args[2]
 }
 catch (MissingPropertyException) {
     throw new IllegalArgumentException('\n\nusage: gremlin -e ParseGitHubArchive.groovy <inputFileList> <verticesFileName> <edgesFileName> \n')
