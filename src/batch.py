@@ -7,13 +7,13 @@ def ensure_dir(f):
 
 jobIndex = sys.argv[1]
 
-tmpDir = '/tmp/'
-scratchDir =  '../scratch/'
-gzDir = scatchDir + 'githubarchive_gz/'
-jsonDir = scratchDir + 'githubarchive_json/'
+tmpDir = '../../../scratch/tmp/'
+scratchDir =  '../../../scratch/'
+gzDir = scratchDir + 'gha/githubarchive_gz/'
+jsonDir = scratchDir + 'gha/githubarchive_json/'
 rubyScript = 'FixGitHubArchiveDelimiters.rb'
 parseScript = 'ParseGitHubArchive.groovy'
-gremlinSh = '../../titan/bin/gremlin.sh'
+gremlinSh = '../../titan-mod/bin/gremlin.sh'
 verticesFile = tmpDir + 'vertices_' + jobIndex + '.txt'
 edgesFile = tmpDir + 'edges_' + jobIndex + '.txt'
 
@@ -45,11 +45,9 @@ for f in files:
         os.system(cmd)
 
     if jsonDir + f not in jsonFiles:
-        #print 'cleaning ' + f
-        cmd = 'ruby1.9 ' + rubyScript + ' ' + gzDir + f + '.gz ' + jsonDir + f
+        print 'cleaning ' + f
+        cmd = 'ruby ' + rubyScript + ' ' + gzDir + f + '.gz ' + jsonDir + f
         os.system(cmd)
-
-
 
 print 'parsing job ' + jobIndex
 cmd = gremlinSh + ' -e ' + parseScript + ' ' + jobFile.replace('.txt','_full.txt') + ' ' + verticesFile + ' ' + edgesFile + ' > ' + logFile

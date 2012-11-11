@@ -15,20 +15,22 @@ def clean():
     os.system('rm -rf /Users/vadasg/research/thinkaurelius/scratch/*/*gz')
 
 
-os.system('rm -rf /tmp/*txt')
 #clean()
 
 fileList = []
-current = parse('2012-03-12-22')
+current = parse('2012-03-12-01')
 
-while current <datetime.now():
+#while current <datetime.now():
+while current < parse('2012-11-09-23'):
     fileList.append(current.strftime("%Y-%m-%d-X%H").replace('X0','').replace('X','') + '.json')
     current += relativedelta(hours=+1)
 
-fileList = fileList[:6]
-threads = 2
-tmpDir = '/tmp/'
-scratchDir = '/tmp/'
+#fileList = fileList[:8]
+threads = 8
+tmpDir = '../../../scratch/tmp/'
+#os.system('rm -rf ' + tmpDir + '*txt')
+scratchDir = '../../../scratch/'
+outDir = scratchDir + 'full/'
 
 if len(sys.argv) < 3:
     vertexFile = 'parsed_vertices.txt'
@@ -36,8 +38,8 @@ if len(sys.argv) < 3:
 else:
     [vertexFile, edgeFile] = sys.argv[1:]
     
-tempVertexFile = scratchDir + 'temp_' + vertexFile    
-tempEdgeFile = scratchDir + 'temp_' + edgeFile    
+tempVertexFile = scratchDir + vertexFile.replace('.txt','_temp.txt')
+tempEdgeFile = scratchDir + edgeFile.replace('.txt','_temp.txt')
 
 splitFileList = chunk(fileList,threads)
 
@@ -62,8 +64,8 @@ cmd += 'cat ' + tmpDir + 'edges_*.txt > ' + tempEdgeFile + ' & wait '
 os.system(cmd)
 
 print 'sorting output'
-cmd = 'time sort -u -S2G -T' + scratchDir + ' -o ' + vertexFile + ' ' + tempVertexFile +' & '
-cmd += 'time sort -u -S2G -T' + scratchDir + ' -o ' + edgeFile + ' ' + tempEdgeFile + ' &  wait'
+cmd = 'time sort -u -S3500M -T' + scratchDir + ' -o ' + outDir +vertexFile + ' ' + tempVertexFile +' & '
+cmd += 'time sort -u -S3500M -T' + scratchDir + ' -o ' + outDir +edgeFile + ' ' + tempEdgeFile + ' &  wait'
 #print cmd
 os.system(cmd)
 
