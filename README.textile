@@ -1,30 +1,8 @@
 !https://raw.github.com/vadasg/githubarchive-parser/master/doc/githubarchive-schema.png!
 
-githubarchive-parser is used to load locally stored "GitHub Archive":http://www.githubarchive.org/ files, based on the above schema.  It uses "Gremlin":https://github.com/tinkerpop/gremlin/wiki to create a "Titan":http://thinkaurelius.github.com/titan/ graph database.  It makes use of batch loading tools provided by "Blueprints":http://blueprints.tinkerpop.com.
+githubarchive-parser is used to parse "GitHub Archive":http://www.githubarchive.org/ files. The archive events are mapped onto the "proprety graph model":https://github.com/tinkerpop/blueprints/wiki/Property-Graph-Model, based on the above schema. It uses "Gremlin":https://github.com/tinkerpop/gremlin/wiki to create a "Titan":http://thinkaurelius.github.com/titan/ graph database using batch loading tools provided by "Blueprints":http://blueprints.tinkerpop.com.
 
-Getting started:
-
-First download as much of the GitHub Archive as you want to load.  To get everything to date:
-
-@mkdir githubarchive@
-@cd githubarchive@
-@for i in {3..10}; do wget -q http://data.githubarchive.org/2012-`printf "%02d" $i`-{01..31}-{0..23}.json.gz & done@
-
-
-Next you will need a version of Titan built with Groovy 1.8.8 or later, due to a known bug with json parsing in Groovy 1.8.6.  Gremlin 2.1.0 uses Groovy 1.8.6, but Gremlin 2.2.0-SNAPSHOT uses Groovy 1.8.8.
-
-To start loading, first review the options at the beginning of ImportGitHubArchive.groovy then do
-
-@gremlin -e ImportGitHubArchive.groovy <path to downloaded files>@
-
-Loading all of the data from the start of the archive in 2012-03 through the end of 2012-09 took me just under 9 hours on a single desktop machine.  When it is finished you should see a summary like this:
-
-
-@Done. Summary:@
-@18482214 events@
-@17009381 vertices@
-@47704461 edges@
-@32357.591 seconds elapsed@
+For use, see the "documentation":https://github.com/vadasg/githubarchive-parser/wiki
 
 
 Author: Vadas Gintautas
