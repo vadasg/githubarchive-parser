@@ -15,9 +15,12 @@ try {
     inputFileList = args[0]
     verticesFileName = args[1]
     edgesFileName = args[2]
+    //inputFileList = a1
+    //verticesFileName = a2
+    //edgesFileName = a3
 }
 catch (MissingPropertyException) {
-    throw new IllegalArgumentException('\n\nusage: gremlin -e ParseGitHubArchive.groovy <inputFileList> <verticesFileName> <edgesFileName> \n')
+    throw new IllegalArgumentException('\n\nusage: groovy ParseGitHubArchive.groovy <inputFileList> <verticesFileName> <edgesFileName> \n')
 }
 
 
